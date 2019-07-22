@@ -48,7 +48,7 @@ class LogitWrapper:
 
         return {'numerical': numerical_features, 'categorical': categorical_features}
 
-    def _build_model_pipeline(self, X: pd.DataFrame) -> None:
+    def _build_model_pipeline(self, X: pd.DataFrame, random_state=None) -> None:
         """
 
         :param X:
@@ -76,17 +76,19 @@ class LogitWrapper:
                 ('cat', categorical_transformer, categorical_features)])
 
         self.model_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
-                                              ('classifier', LogisticRegression(solver='saga',
-                                                                                penalty='elasticnet'))])
+                                              ('classifier', LogisticRegression(l1_ratio=.5,
+                                                                                solver='saga',
+                                                                                penalty='elasticnet',
+                                                                                random_state=random_state))])
 
-    def fit(self, X: pd.DataFrame, y: np.array) -> None:
+    def fit(self, X: pd.DataFrame, y: np.array, random_state=None) -> None:
         """
 
         :param X: dataframe of predictors
         :param y: numpy array of labels
         :return: N/A. trains a regularized model using default parameters
         """
-        self._build_model_pipeline(X)
+        self._build_model_pipeline(X, random_state)
         self.model_pipeline.fit(X, y)
 
     def predict(self, X: pd.DataFrame) -> np.array:
@@ -133,7 +135,7 @@ class LogitWrapper:
         else:
             raise NameError("No trained model could be found")
 
-    def tune_parameters(self, X: pd.DataFrame, y: np.array) -> dict:
+    def tune_parameters(self, X: pd.DataFrame, y: np.array, random_state=None) -> dict:
         """
 
         note that this will replace the current model pipeline, if any exists
@@ -149,11 +151,18 @@ class LogitWrapper:
             'classifier__C': [0.1, 1.0, 10, 100],
             'classifier__l1_ratio': uniform(0, 1)
         }
-        log_loss_scorer = make_scorer(log_loss)
 
-        random_search = RandomizedSearchCV(self.model_pipeline, param_search_space)
+        log_loss_scorer = make_scorer(log_loss)
+        f1_scorer = make_scorer(f1_score)
+
+        random_search = RandomizedSearchCV(estimator=self.model_pipeline,
+                                           param_distributions = param_search_space,
+                                           scoring= {'f1': f1_scorer,
+                                                     'log_loss': log_loss_scorer},
+                                           random_state=random_state,
+                                           refit='log_loss')
         random_search.fit(X, y)
-        # update our pipeline based on search
+        # update our pipeline
         self.model_pipeline = random_search.best_estimator_
         # get our performance and winning params
         params = random_search.best_params_
