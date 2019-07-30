@@ -8,9 +8,12 @@ from scipy.stats import uniform
 from .base_wrapper import ClassificationWrapper
 
 
-class LogitWrapper(ClassificationWrapper):
+# TODO: test!
+class GradientBoostWrapper(ClassificationWrapper):
+    def __init__(self, model_type="gbm", random_state=None):
+        super().__init__(model_type, random_state)
 
-    def tune_parameters(self, X: pd.DataFrame, y: np.array) -> dict:
+    def tune_parameters(self, X: pd.DataFrame, y: np.array, early_stopping=False) -> dict:
         """
 
         note that this will replace the current model pipeline, if any exists
@@ -23,9 +26,14 @@ class LogitWrapper(ClassificationWrapper):
         self._build_model_pipeline(X)
         param_search_space = {
             'preprocessor__num__imputer__strategy': ['mean', 'median', 'most_frequent'],
-            'classifier__C': [0.1, 1.0, 10, 100],
-            'classifier__l1_ratio': uniform(0, 1)
+            'classifier__learning_rate': [0.1, 0.01, 0.001],
+            'classifier__n_estimators': uniform(50, 1000),
+            'classifier__subsample': uniform(.4, 1),
+            'classifier__max_depth': uniform(2, 10)
         }
+        if early_stopping:
+            param_search_space['validation_fraction'] = uniform(0.1, 0.5, 0.1)
+            param_search_space['n_iter_no_change'] = uniform(10, 100)
 
         log_loss_scorer = make_scorer(log_loss)
         f1_scorer = make_scorer(f1_score)
@@ -46,8 +54,6 @@ class LogitWrapper(ClassificationWrapper):
         ll = best_model['mean_test_log_loss']
         params['scores'] = {'f1_score': f1, 'logloss': ll}
         return params
-
-
 
 
 
