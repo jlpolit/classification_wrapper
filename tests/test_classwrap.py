@@ -10,6 +10,7 @@ from classwrap.logit_wrapper import LogitWrapper
 def get_data():
     df_path_local = '../data/DR_Demo_Lending_Club_reduced.csv'
     if not os.path.isfile(df_path_local):
+        os.mkdir('../data')
         df_url = 'https://s3.amazonaws.com/datarobot_public_datasets/DR_Demo_Lending_Club_reduced.csv'
         df = pd.read_csv(df_url)
         df.to_csv(df_path_local, index=False)
