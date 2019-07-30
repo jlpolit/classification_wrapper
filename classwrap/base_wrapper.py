@@ -21,7 +21,12 @@ class ClassificationWrapper:
                                                          penalty='elasticnet',
                                                          random_state=random_state),
                              'gbm': GradientBoostingClassifier(random_state=random_state)}
-        self.model = self.model_lookup.get(model_type)
+        available_models = self.model_lookup.keys()
+        if model_type in available_models:
+            self.model = self.model_lookup.get(model_type)
+        else:
+            raise NotImplementedError(f"Specified model type not supported. Current models available: "
+                                      f"{available_models}")
         self.param_search_space = None
 
     @staticmethod
