@@ -9,6 +9,6 @@ setup(
     install_requires=[
         'scikit-learn==0.21.2',
         'pandas==0.24.2',
-        'numpy==1.16.3'
+        'numpy==1.22.0'
     ],
 )
